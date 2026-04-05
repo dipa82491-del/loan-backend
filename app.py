@@ -5,38 +5,23 @@ from fastapi import FastAPI
 import pickle
 import numpy as np
 from pydantic import BaseModel
-<<<<<<< HEAD
-=======
 import os
->>>>>>> 4263363 (Updated dataset + model + FastAPI app)
 
 # =========================
 # 2. LOAD MODEL & SCALER
 # =========================
-<<<<<<< HEAD
-model = pickle.load(open("loan_model.pkl", "rb"))
-scaler = pickle.load(open("scaler.pkl", "rb"))
-=======
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 model = pickle.load(open(os.path.join(BASE_DIR, "loan_model.pkl"), "rb"))
 scaler = pickle.load(open(os.path.join(BASE_DIR, "scaler.pkl"), "rb"))
->>>>>>> 4263363 (Updated dataset + model + FastAPI app)
 
 # =========================
 # 3. CREATE APP
 # =========================
-<<<<<<< HEAD
-app = FastAPI()
-
-# =========================
-# 4. INPUT FORMAT (IMPORTANT)
-=======
 app = FastAPI(title="Loan Approval Prediction API")
 
 # =========================
 # 4. INPUT MODEL (VALIDATION)
->>>>>>> 4263363 (Updated dataset + model + FastAPI app)
 # =========================
 class LoanRequest(BaseModel):
     Gender: int
@@ -48,38 +33,22 @@ class LoanRequest(BaseModel):
     CoapplicantIncome: float
     LoanAmount: float
     Loan_Amount_Term: float
-<<<<<<< HEAD
-    Credit_History: float
-    Property_Area: int
-
-# =========================
-# 5. ROOT CHECK
-=======
     Credit_History: int
     Property_Area: int
 
 # =========================
 # 5. ROOT
->>>>>>> 4263363 (Updated dataset + model + FastAPI app)
 # =========================
 @app.get("/")
 def home():
     return {"message": "Loan Prediction API is running"}
 
 # =========================
-<<<<<<< HEAD
-# 6. PREDICTION API
-=======
 # 6. PREDICTION
->>>>>>> 4263363 (Updated dataset + model + FastAPI app)
 # =========================
 @app.post("/predict")
 def predict(data: LoanRequest):
 
-<<<<<<< HEAD
-    # Convert input to array
-    input_data = np.array([[
-=======
     # =========================
     # INPUT VALIDATION
     # =========================
@@ -96,7 +65,6 @@ def predict(data: LoanRequest):
     # CONVERT INPUT
     # =========================
     input_data = np.array([[ 
->>>>>>> 4263363 (Updated dataset + model + FastAPI app)
         data.Gender,
         data.Married,
         data.Dependents,
@@ -110,70 +78,53 @@ def predict(data: LoanRequest):
         data.Property_Area
     ]])
 
-<<<<<<< HEAD
     # Apply scaling
     input_scaled = scaler.transform(input_data)
 
     # Predict
     prediction = model.predict(input_scaled)[0]
-
-    # Output
-    result = "Approved" if prediction == 1 else "Rejected"
-
-    return {"prediction": result}
-
-
-=======
-    # =========================
-    # SCALE + PREDICT
-    # =========================
-    try:
-        input_scaled = scaler.transform(input_data)
-        prediction = model.predict(input_scaled)[0]
-    except Exception as e:
-        return {"status": "error", "message": str(e)}
-
     result = "Approved" if prediction == 1 else "Rejected"
 
     # =========================
-    # EXPLAINABLE AI (IMPROVED)
+    # EXPLAINABLE AI / REJECTION ANALYSIS
     # =========================
     reasons = []
+
     total_income = data.ApplicantIncome + data.CoapplicantIncome
+    debt_to_income_ratio = data.LoanAmount / total_income if total_income > 0 else float("inf")
+    self_employed_unstable = data.Self_Employed == 1 and total_income < 3500
 
-    # Rejection logic aligned with dataset
+    if data.Credit_History == 0:
+        reasons.append("Poor Credit History")
+
+    if total_income < 2500:
+        reasons.append("Income below minimum threshold")
+
+    if debt_to_income_ratio > 40:
+        reasons.append("High debt-to-income ratio")
+
+    if self_employed_unstable:
+        reasons.append("Self-employed stability risk")
+
     if prediction == 0:
-        if total_income < 3000:
-            reasons.append("Low Income")
-
-        if data.LoanAmount > 300:
-            reasons.append("High Loan Amount")
-
-        if data.Credit_History == 0:
-            reasons.append("Poor Credit History")
-
+        if not reasons:
+            reasons.append("Model predicted rejection based on learned risk patterns")
     else:
         reasons.append("Eligible for Loan")
-
         if data.Credit_History == 1:
             reasons.append("Good Credit History")
+        if total_income >= 2500 and debt_to_income_ratio <= 40:
+            reasons.append("Healthy income and debt profile")
+        if data.Self_Employed == 1 and not self_employed_unstable:
+            reasons.append("Stable self-employed income")
 
-        if total_income > 5000:
-            reasons.append("Strong Income")
-
-    # =========================
-    # RESPONSE
-    # =========================
     return {
         "status": "success",
         "prediction": result,
         "reasons": reasons
     }
 
-# =========================
-# 7. RUN SERVER
-# =========================
->>>>>>> 4263363 (Updated dataset + model + FastAPI app)
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=True)
